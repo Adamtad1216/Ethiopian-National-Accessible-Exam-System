@@ -1,0 +1,16 @@
+{
+  "name": "enaes-workspace",
+  "private": true,
+  "scripts": {
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:student": "npm --prefix frontend run dev:student",
+    "dev:staff": "npm --prefix frontend run dev:staff",
+    "build:backend": "npm --prefix backend run build",
+    "build:student": "npm --prefix frontend run build:student",
+    "build:staff": "npm --prefix frontend run build:staff",
+    "test:backend": "npm --prefix backend run test",
+    "test:frontend": "npm --prefix frontend run test",
+    "test:e2e:smoke": "npm --prefix frontend run e2e:smoke",
+    "check:release": "npm run build:backend && npm run build:student && npm run build:staff && npm run test:backend && npm run test:frontend && npm run test:e2e:smoke"
+  }
+}

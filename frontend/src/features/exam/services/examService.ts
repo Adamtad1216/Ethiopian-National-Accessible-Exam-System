@@ -1,0 +1,16 @@
+export {
+  getAllExamsApi,
+  getAssignedExamsApi,
+  createExamApi,
+  requestApprovalApi,
+  approveExamApi,
+  publishExamApi,
+  getExamQuestionsApi,
+  createQuestionApi,
+  submitResponseApi,
+  syncResponsesApi,
+  gradeExamApi,
+  getMyResultsApi,
+  getResultReviewApi,
+  getAllResultsApi,
+} from "@/services/api";
