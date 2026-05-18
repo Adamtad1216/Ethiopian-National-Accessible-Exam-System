@@ -215,10 +215,15 @@ function AppSidebar() {
   };
 
   const toggleTTS = () => {
-    const nextMuted = !isRouteMuted;
-    setRouteAudioMuted(location.pathname, nextMuted);
-    setIsRouteMuted(nextMuted);
-    if (nextMuted) {
+    const nextEnabled = !preferences.tts.enabled;
+    updatePreferences({
+      tts: {
+        ...preferences.tts,
+        enabled: nextEnabled,
+      },
+    });
+    sessionStorage.setItem("enaes_manually_muted", nextEnabled ? "false" : "true");
+    if (!nextEnabled) {
       ttsService.stop();
     }
   };
@@ -526,19 +531,21 @@ function AppSidebar() {
               <Moon className="h-4 w-4" />
             )}
           </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleTTS}
-            className="h-8 w-8 text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
-            aria-label={isRouteMuted ? "Unmute this page" : "Mute this page"}
-          >
-            {isRouteMuted ? (
-              <VolumeX className="h-4 w-4" />
-            ) : (
-              <Volume2 className="h-4 w-4" />
-            )}
-          </Button>
+          {user.role === "student" && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleTTS}
+              className="h-8 w-8 text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+              aria-label={!preferences.tts.enabled ? "Unmute this page" : "Mute this page"}
+            >
+              {!preferences.tts.enabled ? (
+                <VolumeX className="h-4 w-4" />
+              ) : (
+                <Volume2 className="h-4 w-4" />
+              )}
+            </Button>
+          )}
         </div>
         {!collapsed && (
           <div className="flex items-center gap-2 rounded-lg bg-sidebar-accent/30 p-2">

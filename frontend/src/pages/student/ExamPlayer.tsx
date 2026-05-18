@@ -51,7 +51,7 @@ import { pickText, resolveLanguage } from "@/lib/locale";
 export default function ExamPlayer() {
   const { examId } = useParams<{ examId: string }>();
   const navigate = useNavigate();
-  const { user, preferences } = useAuth();
+  const { user, preferences, updatePreferences } = useAuth();
 
   const [exam, setExam] = useState<Exam | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -185,6 +185,24 @@ export default function ExamPlayer() {
         synced: false,
       });
 
+      // Speak confirmation if TTS is enabled
+      const q = questions.find((entry) => entry._id === questionId);
+      const opt = q?.options.find((o) => o._id === optionId);
+      if (q && opt && ttsEnabled) {
+        const lang = preferences.language === "am" && q.textAm ? "am" : "en";
+        const optText = lang === "am" && opt.textAm ? opt.textAm : opt.text;
+        const confirmationText = lang === "am"
+          ? `የመረጡት መልስ ምርጫ ${opt.label} ነው። ${optText}.`
+          : `The answer you selected is option ${opt.label}. ${optText}.`;
+
+        ttsService.stop();
+        if (speakTimeoutRef.current) {
+          window.clearTimeout(speakTimeoutRef.current);
+          speakTimeoutRef.current = null;
+        }
+        void ttsService.speak(confirmationText, lang);
+      }
+
       if (!isOnline || Number.isNaN(optionIndex)) return;
 
       void Promise.resolve()
@@ -200,7 +218,7 @@ export default function ExamPlayer() {
           console.error("Failed to auto-save response", error);
         });
     },
-    [examId, isOnline, user],
+    [examId, isOnline, user, questions, ttsEnabled, preferences.language],
   );
 
   const goToNext = useCallback(() => {
@@ -566,10 +584,16 @@ export default function ExamPlayer() {
         }
         case "5":
           e.preventDefault();
+          if (ttsEnabled) {
+            ttsService.stop();
+          }
           goToPrev();
           break;
         case "6":
           e.preventDefault();
+          if (ttsEnabled) {
+            ttsService.stop();
+          }
           goToNext();
           break;
         case " ":
@@ -748,7 +772,15 @@ export default function ExamPlayer() {
               size="icon"
               className="h-8 w-8"
               onClick={() => {
-                setTtsEnabled(!ttsEnabled);
+                const nextEnabled = !ttsEnabled;
+                setTtsEnabled(nextEnabled);
+                updatePreferences({
+                  tts: {
+                    ...preferences.tts,
+                    enabled: nextEnabled,
+                  },
+                });
+                sessionStorage.setItem("enaes_manually_muted", nextEnabled ? "false" : "true");
                 ttsService.stop();
               }}
               aria-label={

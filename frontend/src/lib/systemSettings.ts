@@ -17,13 +17,18 @@ export function applySystemDefaultsToPreferences(
   settings: SystemSettings,
 ): UserPreferences {
   const normalizedLanguage = resolveLanguage(settings.defaultLanguage);
+  
+  // Respect manually muted override if set in sessionStorage
+  const manuallyMuted = sessionStorage.getItem("enaes_manually_muted") === "true";
+  const ttsEnabled = manuallyMuted ? false : settings.ttsEnabled;
+
   return {
     ...preferences,
     theme: settings.defaultTheme,
     language: normalizedLanguage,
     tts: {
       ...preferences.tts,
-      enabled: settings.ttsEnabled,
+      enabled: ttsEnabled,
       language: normalizedLanguage,
       speed: settings.ttsSpeed,
       voice: settings.ttsVoice,

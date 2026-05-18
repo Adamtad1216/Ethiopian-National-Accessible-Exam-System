@@ -213,6 +213,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     setUser(null);
     clearTokens();
+    sessionStorage.removeItem("enaes_manually_muted");
   }, []);
 
   const updatePreferences = useCallback((prefs: Partial<UserPreferences>) => {
