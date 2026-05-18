@@ -312,8 +312,27 @@ export default function StudentPortalAuthPage() {
     window.location.href = "/student";
   };
 
+  const handlePageClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement | null;
+    if (!target) return;
+
+    // Ignore clicks inside form input fields so typing isn't interrupted
+    if (
+      target.tagName === "INPUT" ||
+      target.tagName === "TEXTAREA" ||
+      target.tagName === "SELECT" ||
+      target.isContentEditable
+    ) {
+      return;
+    }
+
+    // Otherwise, trigger the spoken instructions
+    void readInstructions();
+  };
+
   return (
     <div
+      onClick={handlePageClick}
       className={`min-h-screen p-4 sm:p-6 flex items-center justify-center ${highContrast ? "bg-black text-white" : "bg-background"}`}
       role="main"
       aria-label={t("Student authentication portal", "የተማሪ ማረጋገጫ ፖርታል")}

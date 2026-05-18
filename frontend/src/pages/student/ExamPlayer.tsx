@@ -74,6 +74,7 @@ export default function ExamPlayer() {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const questionRefs = useRef<HTMLDivElement>(null);
   const instructionsSpokenRef = useRef(false);
+  const speakTimeoutRef = useRef<number | null>(null);
   const language = resolveLanguage(preferences.language);
   const t = (en: string, am: string) => pickText(language, en, am);
 
@@ -90,8 +91,32 @@ export default function ExamPlayer() {
           getAssignedExamsApi(),
           getExamQuestionsApi(examId),
         ]);
-        setExam(assignedExams.find((e) => e._id === examId) ?? null);
-        setQuestions(examQuestions);
+        const examData = assignedExams.find((e) => e._id === examId) ?? null;
+        setExam(examData);
+
+        let processedQuestions = [...examQuestions];
+        if (examData?.shuffleQuestions) {
+          for (let i = processedQuestions.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [processedQuestions[i], processedQuestions[j]] = [processedQuestions[j], processedQuestions[i]];
+          }
+        }
+
+        if (examData?.shuffleOptions) {
+          processedQuestions = processedQuestions.map((q) => {
+            const shuffledOptions = [...q.options];
+            for (let i = shuffledOptions.length - 1; i > 0; i--) {
+              const j = Math.floor(Math.random() * (i + 1));
+              [shuffledOptions[i], shuffledOptions[j]] = [shuffledOptions[j], shuffledOptions[i]];
+            }
+            return {
+              ...q,
+              options: shuffledOptions,
+            };
+          });
+        }
+
+        setQuestions(processedQuestions);
       } catch (error) {
         console.error("Failed to load exam player data", error);
         const message =
@@ -187,7 +212,16 @@ export default function ExamPlayer() {
   }, [currentIndex]);
 
   const speakCurrentQuestion = useCallback(() => {
-    if (!currentQuestion) return;
+    if (!currentQuestion || !exam) return;
+    if (exam.enableTTS === false) return;
+
+    if (speakTimeoutRef.current) {
+      window.clearTimeout(speakTimeoutRef.current);
+      speakTimeoutRef.current = null;
+    }
+
+    const targetRate = exam.speechRate === "slow" ? 0.75 : exam.speechRate === "fast" ? 1.35 : 1.0;
+    ttsService.updateSettings({ speed: targetRate });
 
     const lang =
       preferences.language === "am" && currentQuestion.textAm ? "am" : "en";
@@ -196,6 +230,14 @@ export default function ExamPlayer() {
       label: o.label,
       text: lang === "am" && o.textAm ? o.textAm : o.text,
     }));
+
+    const triggerAutoRepeat = () => {
+      if (exam.autoRepeat && ttsEnabled && currentQuestion) {
+        speakTimeoutRef.current = window.setTimeout(() => {
+          speakCurrentQuestion();
+        }, 3000);
+      }
+    };
 
     if (currentIndex === totalQuestions - 1) {
       const optionsText = opts
@@ -216,12 +258,15 @@ export default function ExamPlayer() {
 
       void ttsService
         .speak(finalQuestionPrompt, lang)
-        .then(() => ttsService.speak(finalQuestionInstruction, lang));
+        .then(() => ttsService.speak(finalQuestionInstruction, lang))
+        .then(triggerAutoRepeat);
       return;
     }
 
-    ttsService.speakQuestion(text, opts, lang, currentIndex + 1);
-  }, [currentQuestion, currentIndex, preferences.language, totalQuestions]);
+    void ttsService
+      .speakQuestion(text, opts, lang, currentIndex + 1)
+      .then(triggerAutoRepeat);
+  }, [currentQuestion, currentIndex, preferences.language, totalQuestions, exam, ttsEnabled]);
 
   const handleSubmit = useCallback(async () => {
     if (!examId) return;
@@ -457,11 +502,19 @@ export default function ExamPlayer() {
     if (ttsEnabled && currentQuestion && introComplete) {
       speakCurrentQuestion();
     }
-    return () => ttsService.stop();
+    return () => {
+      ttsService.stop();
+      if (speakTimeoutRef.current) {
+        window.clearTimeout(speakTimeoutRef.current);
+        speakTimeoutRef.current = null;
+      }
+    };
   }, [currentQuestion, introComplete, speakCurrentQuestion, ttsEnabled]);
 
   // Keyboard shortcuts
   useEffect(() => {
+    if (exam && exam.keyboardNavigation === false) return;
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (showSubmitDialog || showResults || !currentQuestion) return;
 
@@ -541,6 +594,7 @@ export default function ExamPlayer() {
     totalQuestions,
     handleSubmit,
     speakExamReviewSummary,
+    exam,
   ]);
 
   // === Early returns AFTER all hooks ===

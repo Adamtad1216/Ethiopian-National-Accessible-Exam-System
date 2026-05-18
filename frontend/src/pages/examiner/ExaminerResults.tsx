@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,7 @@ import type { ExamParticipantResultApi } from "@/services/api";
 
 export default function ExaminerResults() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [exams, setExams] = useState<Exam[]>([]);
   const [results, setResults] = useState<ExamResult[]>([]);
   const [selectedExamId, setSelectedExamId] = useState("all");
@@ -98,7 +99,7 @@ export default function ExaminerResults() {
       const exam = exams.find((entry) => entry._id === result.examId);
       return {
         examTitle: exam?.title ?? result.examId,
-        studentId: result.studentId,
+        studentId: result.studentName || result.studentId,
         percentage: result.percentage,
         grade: result.grade,
         totalCorrect: result.totalCorrect,
@@ -236,16 +237,26 @@ export default function ExaminerResults() {
                   <div>
                     <h3 className="font-medium">{exam?.title || "Exam"}</h3>
                     <p className="text-sm text-muted-foreground">
-                      Student: {result.studentId}
+                      Student: {result.studentName || result.studentId}
                     </p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-bold font-display text-primary">
-                      {result.percentage}%
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Grade: {result.grade}
-                    </p>
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <p className="text-2xl font-bold font-display text-primary">
+                        {result.percentage}%
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Grade: {result.grade}
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate(`/examiner/results/${result.studentId}/${result.examId}`)}
+                      className="bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-700 font-semibold text-xs dark:bg-emerald-950/30 dark:hover:bg-emerald-950/50 dark:border-emerald-800/50 dark:text-emerald-400"
+                    >
+                      Review Result
+                    </Button>
                   </div>
                 </div>
                 <div className="mt-3 grid gap-2">

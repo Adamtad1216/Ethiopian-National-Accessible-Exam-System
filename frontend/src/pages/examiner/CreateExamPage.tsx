@@ -133,6 +133,7 @@ export default function CreateExamPage() {
     createEmptyQuestion(),
   );
   const [isSaving, setIsSaving] = useState(false);
+  const isSubmittingRef = React.useRef(false);
 
   const subjectLabelByValue = useMemo(
     () =>
@@ -276,12 +277,17 @@ export default function CreateExamPage() {
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
+    if (isSubmittingRef.current || isSaving) {
+      return;
+    }
+
     if (validationErrors.length > 0) {
       toast.error(validationErrors[0]);
       return;
     }
 
     try {
+      isSubmittingRef.current = true;
       setIsSaving(true);
 
       const exam = await createExamApi({
@@ -328,6 +334,7 @@ export default function CreateExamPage() {
       toast.error(message);
     } finally {
       setIsSaving(false);
+      isSubmittingRef.current = false;
     }
   };
 
@@ -424,9 +431,7 @@ export default function CreateExamPage() {
                   <SelectValue placeholder="Select grade" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="9">Grade 9</SelectItem>
-                  <SelectItem value="10">Grade 10</SelectItem>
-                  <SelectItem value="11">Grade 11</SelectItem>
+                  <SelectItem value="undergraduate">Exam for undergraduate</SelectItem>
                   <SelectItem value="12">Grade 12</SelectItem>
                 </SelectContent>
               </Select>

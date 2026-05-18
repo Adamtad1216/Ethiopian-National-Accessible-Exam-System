@@ -16,6 +16,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
+import { bulkImportStudentsApi } from "@/services/api";
 
 type ImportPreview = {
   fileName: string;
@@ -29,6 +30,7 @@ const REQUIRED_COLUMNS = [
   "firstname",
   "lastname",
   "email",
+  "password",
   "school",
   "grade",
   "region",
@@ -41,7 +43,64 @@ export default function AdminBulkImport() {
   const [dragActive, setDragActive] = useState(false);
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   const [isImporting, setIsImporting] = useState(false);
+  const [parsedStudents, setParsedStudents] = useState<any[]>([]);
   const inputRef = useRef<HTMLInputElement | null>(null);
+
+  const downloadTemplate = () => {
+    const headers = "nationalId,firstName,lastName,email,password,school,grade,region\n";
+    const sampleRow = "ETH-1001,Kebede,Alemu,kebede@school.et,kebePass123,Bole High School,12,Addis Ababa\n";
+    const blob = new Blob([headers + sampleRow], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "student_import_template.csv");
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("CSV template downloaded successfully!");
+  };
+
+  const parseCsvData = (text: string): any[] => {
+    const rows = text
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    if (rows.length <= 1) return [];
+
+    const headers = rows[0].split(",").map((h) => h.trim().toLowerCase());
+    
+    const nationalIdIndex = headers.indexOf("nationalid");
+    const firstNameIndex = headers.indexOf("firstname");
+    const lastNameIndex = headers.indexOf("lastname");
+    const emailIndex = headers.indexOf("email");
+    const passwordIndex = headers.indexOf("password");
+    const schoolIndex = headers.indexOf("school");
+    const gradeIndex = headers.indexOf("grade");
+    const regionIndex = headers.indexOf("region");
+
+    const students: any[] = [];
+    const dataRows = rows.slice(1);
+
+    for (const row of dataRows) {
+      const columns = row.split(",").map((c) => c.trim());
+      if (columns.length < headers.length) continue;
+
+      students.push({
+        nationalId: columns[nationalIdIndex] || "",
+        firstName: columns[firstNameIndex] || "",
+        lastName: columns[lastNameIndex] || "",
+        email: columns[emailIndex] || "",
+        password: columns[passwordIndex] || "",
+        school: columns[schoolIndex] || "",
+        grade: columns[gradeIndex] || "",
+        region: columns[regionIndex] || "",
+      });
+    }
+
+    return students;
+  };
 
   const parseCsvPreview = (text: string, fileName: string): ImportPreview => {
     const rows = text
@@ -89,12 +148,14 @@ export default function AdminBulkImport() {
 
     if (!isCsv && !isXlsx) {
       setPreview(null);
+      setParsedStudents([]);
       toast.error("Unsupported file type. Please upload a CSV or XLSX file.");
       return;
     }
 
     if (file.size > 10 * 1024 * 1024) {
       setPreview(null);
+      setParsedStudents([]);
       toast.error("File is too large. Maximum allowed size is 10MB.");
       return;
     }
@@ -108,11 +169,13 @@ export default function AdminBulkImport() {
           "XLSX preview is not available yet. Please use CSV for validation preview.",
         ],
       });
+      setParsedStudents([]);
       return;
     }
 
     const text = await file.text();
     setPreview(parseCsvPreview(text, file.name));
+    setParsedStudents(parseCsvData(text));
   };
 
   const handleFileSelect = async (file?: File) => {
@@ -122,6 +185,7 @@ export default function AdminBulkImport() {
     } catch (error) {
       console.error("Failed to read import file", error);
       setPreview(null);
+      setParsedStudents([]);
       toast.error("Failed to read this file. Try another file.");
     }
   };
@@ -134,12 +198,18 @@ export default function AdminBulkImport() {
 
     setIsImporting(true);
     try {
-      await new Promise((resolve) => window.setTimeout(resolve, 600));
+      const res = await bulkImportStudentsApi(parsedStudents);
       toast.success(
-        `Imported ${preview.validRows} students from ${preview.fileName}.`,
+        `Successfully imported ${res.importedCount} student accounts!`,
       );
       setPreview(null);
+      setParsedStudents([]);
       if (inputRef.current) inputRef.current.value = "";
+    } catch (error: any) {
+      console.error("Failed to import students", error);
+      toast.error(
+        error?.message || "Failed to import students. Please check your data."
+      );
     } finally {
       setIsImporting(false);
     }
@@ -253,25 +323,29 @@ export default function AdminBulkImport() {
 
         <Card className="shadow-card">
           <CardHeader>
-            <CardTitle className="text-lg font-display">File Format</CardTitle>
+            <CardTitle className="text-lg font-display">File Format & Template</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="rounded-lg bg-muted p-4 font-mono text-xs space-y-1">
               <p className="text-muted-foreground">Required columns:</p>
               <p>
-                nationalId, firstName, lastName, email, school, grade, region
+                nationalId, firstName, lastName, email, password, school, grade, region
               </p>
             </div>
             <div className="mt-4 space-y-2">
               <h4 className="text-sm font-medium">Example:</h4>
               <div className="overflow-x-auto rounded-lg border">
-                <table className="w-full text-xs">
+                <table className="w-full text-xs min-w-[600px]">
                   <thead className="bg-muted">
                     <tr>
                       <th className="p-2 text-left">nationalId</th>
                       <th className="p-2 text-left">firstName</th>
                       <th className="p-2 text-left">lastName</th>
                       <th className="p-2 text-left">email</th>
+                      <th className="p-2 text-left">password</th>
+                      <th className="p-2 text-left">school</th>
+                      <th className="p-2 text-left">grade</th>
+                      <th className="p-2 text-left">region</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -280,11 +354,24 @@ export default function AdminBulkImport() {
                       <td className="p-2">Kebede</td>
                       <td className="p-2">Alemu</td>
                       <td className="p-2">kebede@school.et</td>
+                      <td className="p-2">kebePass123</td>
+                      <td className="p-2">Bole High</td>
+                      <td className="p-2">12</td>
+                      <td className="p-2">Addis Ababa</td>
                     </tr>
                   </tbody>
                 </table>
               </div>
             </div>
+
+            <Button
+              variant="outline"
+              onClick={downloadTemplate}
+              className="w-full mt-4 flex items-center justify-center gap-2 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/30 dark:hover:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800/50 text-emerald-700 dark:text-emerald-400 font-semibold"
+            >
+              <FileSpreadsheet className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              Download Student Import Template (CSV)
+            </Button>
           </CardContent>
         </Card>
       </div>

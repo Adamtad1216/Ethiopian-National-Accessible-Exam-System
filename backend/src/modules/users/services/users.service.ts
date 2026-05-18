@@ -155,3 +155,52 @@ export async function deleteUserByAdmin(
     throw new ApiError(404, "User not found");
   }
 }
+
+export async function bulkImportStudents(
+  students: Array<{
+    nationalId: string;
+    firstName: string;
+    lastName?: string;
+    email: string;
+    password?: string;
+    school?: string;
+    grade?: string;
+    region?: string;
+  }>,
+): Promise<{ importedCount: number }> {
+  let importedCount = 0;
+
+  for (const item of students) {
+    const email = item.email.trim().toLowerCase();
+    const nationalId = item.nationalId.trim();
+
+    const existing = await UserModel.findOne({
+      $or: [{ email }, { accountNumber: nationalId }],
+    }).lean();
+
+    if (existing) {
+      continue;
+    }
+
+    const plainPassword = item.password || nationalId;
+    const passwordHash = await bcrypt.hash(plainPassword, 12);
+
+    await UserModel.create({
+      email,
+      password: passwordHash,
+      firstName: item.firstName.trim(),
+      lastName: (item.lastName || "").trim(),
+      accountNumber: nationalId,
+      role: "student",
+      isActive: true,
+      mustChangePassword: false,
+      school: item.school?.trim(),
+      grade: item.grade?.trim(),
+      region: item.region?.trim(),
+    });
+
+    importedCount++;
+  }
+
+  return { importedCount };
+}

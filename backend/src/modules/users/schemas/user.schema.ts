@@ -26,6 +26,9 @@ const userSchema = new Schema(
     },
     isActive: { type: Boolean, default: true },
     mustChangePassword: { type: Boolean, default: true },
+    school: { type: String, required: false, trim: true },
+    grade: { type: String, required: false, trim: true },
+    region: { type: String, required: false, trim: true },
   },
   { timestamps: true },
 );

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { Outlet, useNavigate, useLocation } from "react-router-dom";
+import { Outlet, useNavigate, useLocation, Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   Sidebar,
@@ -44,27 +44,117 @@ import { pickText, resolveLanguage } from "@/lib/locale";
 
 const roleNavItems: Record<
   UserRole,
-  { title: string; url: string; icon: React.ElementType }[]
+  {
+    title: string;
+    url: string;
+    icon: React.ElementType;
+    description?: string;
+    descriptionAm?: string;
+  }[]
 > = {
   admin: [
-    { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
-    { title: "Users", url: "/admin/users", icon: Users },
-    { title: "Approvals", url: "/admin/approvals", icon: CheckCircle },
-    { title: "Audit Logs", url: "/admin/audit", icon: Shield },
-    { title: "Bulk Import", url: "/admin/bulk-import", icon: Upload },
-    { title: "System Settings", url: "/admin/system-settings", icon: Settings },
+    {
+      title: "Dashboard",
+      url: "/admin",
+      icon: LayoutDashboard,
+      description: "System metrics and overview",
+      descriptionAm: "የስርዓት አጠቃላይ እይታ",
+    },
+    {
+      title: "Users",
+      url: "/admin/users",
+      icon: Users,
+      description: "Manage students & examiners",
+      descriptionAm: "ተማሪዎችን እና ፈታኞችን ያስተዳድሩ",
+    },
+    {
+      title: "Approvals",
+      url: "/admin/approvals",
+      icon: CheckCircle,
+      description: "Review pending exam requests",
+      descriptionAm: "የፈተና ጥያቄዎችን ይገምግሙ",
+    },
+    {
+      title: "Audit Logs",
+      url: "/admin/audit",
+      icon: Shield,
+      description: "Security & compliance logs",
+      descriptionAm: "የደህንነት ምዝግብ ማስታወሻዎች",
+    },
+    {
+      title: "Bulk Import",
+      url: "/admin/bulk-import",
+      icon: Upload,
+      description: "Import accounts from CSV",
+      descriptionAm: "ተማሪዎችን በጅምላ ያስገቡ",
+    },
+    {
+      title: "System Settings",
+      url: "/admin/system-settings",
+      icon: Settings,
+      description: "Global defaults & rules",
+      descriptionAm: "የስርዓት ቅንብሮች እና ህጎች",
+    },
   ],
   examiner: [
-    { title: "Dashboard", url: "/examiner", icon: LayoutDashboard },
-    { title: "My Exams", url: "/examiner/exams", icon: FileText },
-    { title: "Questions", url: "/examiner/questions", icon: BookOpen },
-    { title: "Results", url: "/examiner/results", icon: BarChart3 },
-    { title: "Monitor", url: "/examiner/monitor", icon: Activity },
+    {
+      title: "Dashboard",
+      url: "/examiner",
+      icon: LayoutDashboard,
+      description: "Exams created & pass rates",
+      descriptionAm: "የፈተና አፈጻጸም አጠቃላይ እይታ",
+    },
+    {
+      title: "My Exams",
+      url: "/examiner/exams",
+      icon: FileText,
+      description: "Manage exam papers & drafts",
+      descriptionAm: "ፈተናዎችዎን ያስተዳድሩ",
+    },
+    {
+      title: "Questions",
+      url: "/examiner/questions",
+      icon: BookOpen,
+      description: "Author exam questions",
+      descriptionAm: "ፈተና ጥያቄዎችን ያዘጋጁ",
+    },
+    {
+      title: "Results",
+      url: "/examiner/results",
+      icon: BarChart3,
+      description: "View student score reports",
+      descriptionAm: "የተማሪ ውጤቶችን ይገምግሙ",
+    },
+    {
+      title: "Monitor",
+      url: "/examiner/monitor",
+      icon: Activity,
+      description: "Live exam proctoring monitor",
+      descriptionAm: "የቀጥታ ፈተና ክትትል",
+    },
   ],
   student: [
-    { title: "Dashboard", url: "/student", icon: LayoutDashboard },
-    { title: "My Exams", url: "/student/exams", icon: ClipboardList },
-    { title: "Results", url: "/student/results", icon: GraduationCap },
+    {
+      title: "Dashboard",
+      url: "/student",
+      icon: LayoutDashboard,
+      description: "Access assigned exams",
+      descriptionAm: "የተቀመጡ ፈተናዎችን ይክፈቱ",
+    },
+    {
+      title: "My Exams",
+      url: "/student/exams",
+      icon: ClipboardList,
+      description: "Take scheduled assessments",
+      descriptionAm: "ፈተናዎችን ይውሰዱ",
+    },
+    {
+      title: "Results",
+      url: "/student/results",
+      icon: GraduationCap,
+      description: "View results and review exams",
+      descriptionAm: "ውጤቶችዎን እና ማብራሪያዎችን ይመልከቱ",
+    },
   ],
 };
 
@@ -85,20 +175,33 @@ function AppSidebar() {
 
   if (!user) return null;
   const baseNavItems = roleNavItems[user.role] || [];
-  const navItems =
-    user.role === "student"
-      ? baseNavItems.map((item) => ({
-          ...item,
-          title:
-            item.url === "/student"
-              ? t("Dashboard", "ዳሽቦርድ")
-              : item.url === "/student/exams"
-                ? t("My Exams", "የእኔ ፈተናዎች")
-                : item.url === "/student/results"
-                  ? t("Results", "ውጤቶች")
-                  : item.title,
-        }))
-      : baseNavItems;
+  const navItems = baseNavItems.map((item) => {
+    let title = item.title;
+    let description = "";
+
+    if (user.role === "student") {
+      title =
+        item.url === "/student"
+          ? t("Dashboard", "ዳሽቦርድ")
+          : item.url === "/student/exams"
+            ? t("My Exams", "የእኔ ፈተናዎች")
+            : item.url === "/student/results"
+              ? t("Results", "ውጤቶች")
+              : item.title;
+    } else {
+      title = t(item.title, item.title);
+    }
+
+    if (item.description) {
+      description = t(item.description, item.descriptionAm || "");
+    }
+
+    return {
+      ...item,
+      title,
+      description,
+    };
+  });
 
   const handleLogout = () => {
     logout();
@@ -146,7 +249,7 @@ function AppSidebar() {
 
   useEffect(() => {
     if (!user || user.role !== "student") return;
-    if (!location.pathname.startsWith("/student")) return;
+    if (location.pathname !== "/student") return;
     if (hasReadSidebarIntroRef.current) return;
 
     hasReadSidebarIntroRef.current = true;
@@ -373,6 +476,7 @@ function AppSidebar() {
                   <SidebarMenuButton
                     asChild
                     isActive={location.pathname === item.url}
+                    className="h-auto py-2"
                   >
                     <NavLink
                       to={item.url}
@@ -382,11 +486,22 @@ function AppSidebar() {
                         sidebarMenuModeIndexRef.current = -1;
                         prepareStudentVoiceRoute(item.url);
                       }}
-                      className="hover:bg-sidebar-accent/50"
+                      className="hover:bg-sidebar-accent/50 flex items-start py-2.5 px-3 w-full"
                       activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
                     >
-                      <item.icon className="mr-2 h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
+                      <item.icon className="mr-3 h-5 w-5 mt-0.5 shrink-0" />
+                      {!collapsed && (
+                        <div className="flex flex-col text-left min-w-0">
+                          <span className="font-semibold text-sm leading-tight">
+                            {item.title}
+                          </span>
+                          {item.description && (
+                            <span className="text-[10px] text-muted-foreground mt-0.5 leading-tight whitespace-normal break-words">
+                              {item.description}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -456,6 +571,23 @@ function AppSidebar() {
 }
 
 export default function DashboardLayout() {
+  const { user, isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center p-8">
+          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
+          <p className="text-sm text-muted-foreground font-medium">Loading session...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated || !user) {
+    return <Navigate to="/" replace />;
+  }
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">

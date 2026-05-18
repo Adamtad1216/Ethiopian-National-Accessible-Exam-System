@@ -152,6 +152,22 @@ export default function AdminSettings() {
                 onCheckedChange={(v) => update({ ttsEnabled: v })}
               />
             </div>
+            <div className="flex items-center justify-between">
+              <Label>Voice Choice</Label>
+              <Select
+                value={settings.ttsVoice}
+                onValueChange={(v) => update({ ttsVoice: v })}
+              >
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="default">Default</SelectItem>
+                  <SelectItem value="male">Male Voice</SelectItem>
+                  <SelectItem value="female">Female Voice</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="space-y-2">
               <Label>Default Speed: {settings.ttsSpeed}x</Label>
               <Slider

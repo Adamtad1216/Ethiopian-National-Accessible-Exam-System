@@ -52,6 +52,7 @@ type ResultApi = {
   id: string;
   examId: string;
   studentId: string;
+  studentName?: string;
   score: number;
   sectionScores: Array<{ section: string; score: number; total: number }>;
   updatedAt?: string;
@@ -136,6 +137,7 @@ function mapResult(r: ResultApi): ExamResult {
     _id: r.id,
     examId: r.examId,
     studentId: r.studentId,
+    studentName: r.studentName,
     totalCorrect,
     totalQuestions,
     percentage: r.score,
@@ -475,6 +477,13 @@ export async function getResultReviewApi(
   return apiRequest<ResultReviewApi>(`/results/me/${examId}/review`);
 }
 
+export async function getExaminerResultReviewApi(
+  studentId: string,
+  examId: string,
+): Promise<ResultReviewApi> {
+  return apiRequest<ResultReviewApi>(`/results/review/${studentId}/${examId}`);
+}
+
 export async function getAllResultsApi(): Promise<ExamResult[]> {
   const results = await apiRequest<ResultApi[]>("/results");
   return results.map(mapResult);
@@ -514,4 +523,20 @@ export async function getAuditLogsApi(): Promise<
     details: log.metadata,
     timestamp: log.timestamp,
   }));
+}
+
+export async function bulkImportStudentsApi(students: Array<{
+  nationalId: string;
+  firstName: string;
+  lastName?: string;
+  email: string;
+  password?: string;
+  school?: string;
+  grade?: string;
+  region?: string;
+}>): Promise<{ importedCount: number }> {
+  return apiRequest<{ importedCount: number }>("/users/bulk-import", {
+    method: "POST",
+    body: JSON.stringify({ students }),
+  });
 }

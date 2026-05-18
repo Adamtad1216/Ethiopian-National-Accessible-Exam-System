@@ -116,16 +116,50 @@ class TTSService {
         utterance.lang = effectiveLanguage === 'am' ? 'am' : 'en-US';
 
         const voices = this.getVoicesForLanguage(effectiveLanguage);
-        if (this.settings.voice !== 'default') {
-          const selectedVoice = voices.find(v => v.name === this.settings.voice);
-          if (selectedVoice) {
-            utterance.voice = selectedVoice;
-          } else if (voices.length > 0) {
-            // Fallback to first matching voice when saved voice is unavailable.
-            utterance.voice = voices[0];
+        let selectedVoice: SpeechSynthesisVoice | undefined;
+
+        if (this.settings.voice === "male") {
+          selectedVoice = voices.find((v) => {
+            const name = v.name.toLowerCase();
+            return (
+              name.includes("male") ||
+              name.includes("david") ||
+              name.includes("mark") ||
+              name.includes("george") ||
+              name.includes("james") ||
+              name.includes("sam")
+            );
+          });
+          if (!selectedVoice && voices.length > 0) {
+            selectedVoice = voices[0];
+          }
+        } else if (this.settings.voice === "female") {
+          selectedVoice = voices.find((v) => {
+            const name = v.name.toLowerCase();
+            return (
+              name.includes("female") ||
+              name.includes("zira") ||
+              name.includes("hazel") ||
+              name.includes("susan") ||
+              name.includes("elena") ||
+              name.includes("haruka") ||
+              name.includes("heera")
+            );
+          });
+          if (!selectedVoice && voices.length > 0) {
+            selectedVoice = voices[0];
+          }
+        } else if (this.settings.voice !== "default") {
+          selectedVoice = voices.find((v) => v.name === this.settings.voice);
+          if (!selectedVoice && voices.length > 0) {
+            selectedVoice = voices[0];
           }
         } else if (voices.length > 0) {
-          utterance.voice = voices[0];
+          selectedVoice = voices[0];
+        }
+
+        if (selectedVoice) {
+          utterance.voice = selectedVoice;
         }
 
         utterance.onend = () => {

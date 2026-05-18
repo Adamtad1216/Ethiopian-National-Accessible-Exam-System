@@ -63,3 +63,17 @@ usersRouter.delete(
     res.status(204).send();
   }),
 );
+
+usersRouter.post(
+  "/bulk-import",
+  requireAuth,
+  requireRole("admin"),
+  asyncHandler(async (req, res) => {
+    if (!Array.isArray(req.body.students)) {
+      res.status(400).json({ error: "students must be an array" });
+      return;
+    }
+    const result = await usersService.bulkImportStudents(req.body.students);
+    res.json(result);
+  }),
+);

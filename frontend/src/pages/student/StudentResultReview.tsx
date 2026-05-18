@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, ChevronLeft, ChevronRight, Volume2 } from "lucide-react";
-import { getResultReviewApi } from "@/features/student/services/studentService";
+import { getResultReviewApi, getExaminerResultReviewApi } from "@/services/api";
 import { ttsService } from "@/services/tts";
 import { pickText, resolveLanguage } from "@/lib/locale";
 
@@ -21,7 +21,7 @@ type ReviewQuestion = {
 
 export default function StudentResultReview() {
   const { user, preferences } = useAuth();
-  const { examId } = useParams<{ examId: string }>();
+  const { examId, studentId } = useParams<{ examId: string; studentId?: string }>();
   const navigate = useNavigate();
   const language = resolveLanguage(preferences.language);
   const t = (en: string, am: string) => pickText(language, en, am);
@@ -71,7 +71,9 @@ export default function StudentResultReview() {
       if (!examId) return;
 
       try {
-        const review = await getResultReviewApi(examId);
+        const review = studentId
+          ? await getExaminerResultReviewApi(studentId, examId)
+          : await getResultReviewApi(examId);
         setExamTitle(review.exam.title);
         setExamSubject(review.exam.subject);
         setQuestions(
@@ -130,13 +132,29 @@ export default function StudentResultReview() {
       if (currentIndex < questions.length - 1) {
         setCurrentIndex((prev) => prev + 1);
       } else {
-        navigate("/student/results");
+        navigate(-1);
       }
     };
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [currentIndex, currentQuestion, navigate, questions.length, speakCurrentReview]);
+
+  const handlePageClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement | null;
+    if (!target) return;
+
+    if (
+      target.tagName === "INPUT" ||
+      target.tagName === "TEXTAREA" ||
+      target.tagName === "SELECT" ||
+      target.isContentEditable
+    ) {
+      return;
+    }
+
+    void speakCurrentReview();
+  };
 
   const answeredText = useMemo(() => {
     if (!currentQuestion) return t("Not answered", "አልተመለሰም");
@@ -152,7 +170,7 @@ export default function StudentResultReview() {
     return `${String.fromCharCode(65 + currentQuestion.correctAnswer)}. ${optionText}`;
   }, [currentQuestion, t]);
 
-  if (!user || user.role !== "student") {
+  if (!user || !["student", "examiner", "admin"].includes(user.role)) {
     return <Navigate to="/login" />;
   }
 
@@ -176,7 +194,7 @@ export default function StudentResultReview() {
   }
 
   return (
-    <div className="space-y-6">
+    <div onClick={handlePageClick} className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold font-display">{t("Exam Review", "የፈተና ግምገማ")}</h1>
@@ -185,7 +203,7 @@ export default function StudentResultReview() {
             {examSubject ? ` • ${examSubject}` : ""}
           </p>
         </div>
-        <Button variant="outline" onClick={() => navigate("/student/results")}>
+        <Button variant="outline" onClick={() => navigate(-1)}>
           <ArrowLeft className="mr-2 h-4 w-4" /> {t("Back to Results", "ወደ ውጤቶች ተመለስ")}
         </Button>
       </div>

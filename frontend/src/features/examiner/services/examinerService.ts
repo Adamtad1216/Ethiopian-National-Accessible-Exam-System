@@ -7,4 +7,5 @@ export {
   createQuestionApi,
   getAllResultsApi,
   getExamParticipantResultsApi,
+  getExaminerResultReviewApi,
 } from "@/services/api";

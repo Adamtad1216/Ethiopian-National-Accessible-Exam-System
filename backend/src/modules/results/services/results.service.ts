@@ -147,14 +147,26 @@ export async function getResultsForStudent(userId: string) {
 
 export async function getAllResults() {
   const results = await ResultModel.find().sort({ updatedAt: -1 }).lean();
-  return results.map((result) => ({
-    id: result._id.toString(),
-    studentId: result.studentId.toString(),
-    examId: result.examId.toString(),
-    score: result.score,
-    sectionScores: result.sectionScores,
-    updatedAt: result.updatedAt,
-  }));
+  const studentIds = Array.from(new Set(results.map((r) => r.studentId.toString())));
+  const students = await UserModel.find({ _id: { $in: studentIds } }).lean();
+  const studentMap = new Map(students.map((s) => [s._id.toString(), s]));
+
+  return results.map((result) => {
+    const student = studentMap.get(result.studentId.toString());
+    const studentName = student
+      ? `${student.firstName} ${student.lastName}`.trim()
+      : result.studentId.toString();
+
+    return {
+      id: result._id.toString(),
+      studentId: result.studentId.toString(),
+      studentName,
+      examId: result.examId.toString(),
+      score: result.score,
+      sectionScores: result.sectionScores,
+      updatedAt: result.updatedAt,
+    };
+  });
 }
 
 export async function getResultReviewForStudent(userId: string, examId: string) {

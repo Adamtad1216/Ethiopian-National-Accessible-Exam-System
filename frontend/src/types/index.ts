@@ -157,6 +157,7 @@ export interface ExamResult {
   _id: string;
   examId: string;
   studentId: string;
+  studentName?: string;
   totalCorrect: number;
   totalQuestions: number;
   percentage: number;

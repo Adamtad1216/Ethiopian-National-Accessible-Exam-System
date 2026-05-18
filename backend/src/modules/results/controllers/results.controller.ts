@@ -63,6 +63,19 @@ resultsRouter.get(
 );
 
 resultsRouter.get(
+  "/review/:studentId/:examId",
+  requireAuth,
+  requireRole("admin", "examiner"),
+  asyncHandler(async (req, res) => {
+    const review = await resultsService.getResultReviewForStudent(
+      String(req.params.studentId),
+      String(req.params.examId),
+    );
+    res.json(review);
+  }),
+);
+
+resultsRouter.get(
   "/me",
   requireAuth,
   requireRole("student"),

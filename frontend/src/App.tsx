@@ -146,6 +146,10 @@ function AnimatedRoutes() {
                 element={<ExaminerQuestions />}
               />
               <Route path="/examiner/results" element={<ExaminerResults />} />
+              <Route
+                path="/examiner/results/:studentId/:examId"
+                element={<StudentResultReview />}
+              />
               <Route path="/examiner/monitor" element={<ExaminerMonitor />} />
             </Route>
 
